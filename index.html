@@ -115,7 +115,7 @@
                     <div id="form-progress-bar" class="bg-violet-600 h-2.5 rounded-full" style="width: 25%"></div>
                 </div>
                 
-                <form id="multi-step-form">
+                <form id="multi-step-form" action="https://formspree.io/f/xjkodgwp" method="POST">
                     <div id="step1" class="form-step active">
                         <h3 class="text-xl font-bold mb-1">O Seu Momento Atual</h3>
                         <p class="text-slate-600 mb-6">O único pré-requisito é estar num cargo de liderança ativo.</p>
@@ -377,35 +377,39 @@
             e.preventDefault();
             if (!validateStep(currentStep)) return;
 
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbw-a-OXTfAARQu048KN5k0vW38ghcN5TY5alPKPjQ3OtJdeFfgMhKlNjBta8L8yi8Uw/exec';
             const submitButton = e.target.querySelector('button[type="submit"]');
             submitButton.disabled = true;
             submitButton.textContent = 'Enviando...';
 
-            fetch(scriptURL, { method: 'POST', body: new FormData(form)})
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Network response was not ok, status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Success:', data);
-                    if (data.result === 'success') {
-                        form.parentElement.innerHTML = thankYouMessage.outerHTML;
-                        thankYouMessage.classList.remove('hidden');
-                    } else {
-                        throw new Error(data.error || 'Unknown script error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error during submission:', error);
-                    alert('Ocorreu um erro ao enviar a sua candidatura. Por favor, verifique a sua ligação e tente novamente. Se o erro persistir, contacte o suporte.');
-                })
-                .finally(() => {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Enviar Candidatura';
-                });
+            fetch(e.target.action, { 
+                method: 'POST', 
+                body: new FormData(e.target),
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    form.parentElement.innerHTML = thankYouMessage.outerHTML;
+                    thankYouMessage.classList.remove('hidden');
+                } else {
+                    response.json().then(data => {
+                        if (Object.hasOwn(data, 'errors')) {
+                            alert(data["errors"].map(error => error["message"]).join(", "));
+                        } else {
+                            throw new Error('Network response was not ok.');
+                        }
+                    })
+                }
+            })
+            .catch(error => {
+                console.error('Error!', error.message);
+                alert('Ocorreu um erro ao enviar a sua candidatura. Por favor, tente novamente.');
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Enviar Candidatura';
+            });
         });
 
         window.onload = () => { showStep(currentStep); };
